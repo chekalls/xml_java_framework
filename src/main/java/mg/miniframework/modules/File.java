@@ -6,7 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
-import mg.miniframework.modules.LogManager.LogStatus;
+import mg.miniframework.logging.LogManager;
+import mg.miniframework.logging.LogManager.LogStatus;
 
 public class File {
     private Path contextPath;
