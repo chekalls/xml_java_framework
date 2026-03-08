@@ -37,6 +37,8 @@ import mg.miniframework.service.api.FrameworkService;
 import mg.miniframework.service.registry.CachedService;
 import mg.miniframework.ui.base.HtmlComponent;
 import mg.miniframework.web.response.ContentRenderManager;
+import mg.miniframework.core.dispatch.RequestErrorHandler;
+import mg.miniframework.core.dispatch.NotFoundResponseRenderer;
 
 @WebServlet(name = "FrontControllerServlet", urlPatterns = "/")
 @MultipartConfig
@@ -184,15 +186,20 @@ public class FrontControllerServlet extends HttpServlet {
                         RoutePatternUtils.convertRouteToPattern(entry.getKey().getUrlPath()));
             }
 
-            Integer status = gererRoutes(
+                Integer status = new mg.miniframework.core.dispatch.RequestDispatcherEngine().dispatch(
                     url,
                     routePatterns,
                     routeMap.getUrlMethodsMap(),
                     req,
-                    resp);
+                    resp,
+                    methodeManager,
+                    cachedService,
+                    contentRenderManager,
+                    logManager,
+                    securityManager);
 
             if (status.equals(RouteStatus.NOT_FOUND.getCode())) {
-                print404(req, resp, relativePath, req.getMethod(), routeMap);
+                new NotFoundResponseRenderer().renderNotFound(req, resp, relativePath, req.getMethod(), routeMap, metricsManager, logManager);
             }
 
             if (status.equals(RouteStatus.RETURN_TYPE_UNKNOWN.getCode())) {
@@ -206,156 +213,13 @@ public class FrontControllerServlet extends HttpServlet {
             long duration = System.currentTimeMillis() - startTime;
             metricsManager.addRequestDuration(duration);
             metricsManager.incrementErrorCount();
-            try {
-                logManager.insertLog("Erreur interne: " + e.toString(), LogStatus.ERROR);
-                java.io.StringWriter sw = new java.io.StringWriter();
-                e.printStackTrace(new java.io.PrintWriter(sw));
-                logManager.insertLog(sw.toString(), LogStatus.ERROR);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.setContentType("text/plain;charset=UTF-8");
-            try {
-                resp.getWriter().println("Erreur interne : " + e.toString());
-                java.io.StringWriter sw2 = new java.io.StringWriter();
-                e.printStackTrace(new java.io.PrintWriter(sw2));
-                resp.getWriter().println(sw2.toString());
-            } catch (java.io.IOException ioex) {
-                ioex.printStackTrace();
-            }
+            new RequestErrorHandler().handleInternalError(e, req, resp, logManager);
         }
     }
 
-    private Integer gererRoutes(
-            Url requestURL,
-            Map<Url, Pattern> routes,
-            Map<Url, CachedMethodInfo> methodsMap,
-            HttpServletRequest req,
-            HttpServletResponse resp) throws IOException {
+    
 
-        PrintWriter out = resp.getWriter();
-
-        for (Map.Entry<Url, Pattern> entry : routes.entrySet()) {
-            Url routeURL = entry.getKey();
-
-            if (entry.getValue().matcher(requestURL.getUrlPath()).matches()
-                    && requestURL.getMethod() == routeURL.getMethod()) {
-
-                try {
-                    try {
-                        logManager.insertLog("Route matched: " + routeURL.getUrlPath() + " (http: " + routeURL.getMethod() + ")", LogStatus.DEBUG);
-                    } catch (IOException ioex) {
-                        ioex.printStackTrace();
-                    }
-                    CachedMethodInfo cachedInfo = methodsMap.get(routeURL);
-                    Method method = cachedInfo.getMethod();
-                    System.out.println("""
-                            testing roles =====================================================
-                            """);
-                    if (!securityManager.isAccessAllowed(method, req, resp)) {
-                        return RouteStatus.RETURN_TYPE_UNKNOWN.getCode();
-                    }
-
-                    Map<String, String> pathParams = RoutePatternUtils.extractPathParams(
-                            routeURL.getUrlPath(),
-                            requestURL.getUrlPath());
-
-                    try {
-                        logManager.insertLog("Invoking method: " + method.getDeclaringClass().getName() + "#" + method.getName(), LogStatus.DEBUG);
-                    } catch (IOException ioex) {
-                        ioex.printStackTrace();
-                    }
-
-                    Object result = methodeManager.invokeCorrespondingMethod(
-                            cachedInfo,
-                            method.getDeclaringClass(),
-                            pathParams,cachedService,
-                            req,
-                            resp);
-
-                    try {
-                        logManager.insertLog("Method invoked successfully: " + method.getDeclaringClass().getName() + "#" + method.getName(), LogStatus.DEBUG);
-                    } catch (IOException ioex) {
-                        ioex.printStackTrace();
-                    }
-
-                    if (method.isAnnotationPresent(JsonUrl.class)) {
-                        resp.setContentType("application/json;charset=UTF-8");
-                        out.print(contentRenderManager.convertToJson(result));
-                        out.flush();
-                        return RouteStatus.RETURN_JSON.getCode();
-                    }
-
-                    return contentRenderManager.renderContent(result, req, resp);
-                } catch (Exception e) {
-                    try {
-                        logManager.insertLog("Erreur interne: " + e.toString(), LogStatus.ERROR);
-                        java.io.StringWriter sw = new java.io.StringWriter();
-                        e.printStackTrace(new java.io.PrintWriter(sw));
-                        logManager.insertLog(sw.toString(), LogStatus.ERROR);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                    out.print("Erreur interne : " + e.toString());
-                    out.print("<pre>");
-                    java.io.StringWriter sw2 = new java.io.StringWriter();
-                    e.printStackTrace(new java.io.PrintWriter(sw2));
-                    out.print(sw2.toString().replaceAll("<","&lt;"));
-                    out.print("</pre>");
-                    return RouteStatus.RETURN_TYPE_UNKNOWN.getCode();
-                }
-            }
-        }
-
-        return RouteStatus.NOT_FOUND.getCode();
-    }
-
-    private void print404(HttpServletRequest req, HttpServletResponse resp,
-            String urlPath, String httpMethod,
-            RouteMap routeMap) throws IOException {
-
-        metricsManager.incrementErrorCount();
-
-        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        resp.setContentType("text/html;charset=UTF-8");
-
-        PrintWriter out = resp.getWriter();
-        out.println("<html><body>");
-        out.println("<h1>404 - Page non trouvée</h1>");
-        out.println("<p><b>" + httpMethod + "</b> " + urlPath + "</p>");
-        
-        try {
-            logManager.insertLog("Printing 404 page. Available routes count: " + 
-                routeMap.getUrlMethodsMap().size(), LogStatus.DEBUG);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        
-        out.println("<h3>Routes disponibles (" + routeMap.getUrlMethodsMap().size() + "):</h3>");
-        out.println("<ul>");
-
-        List<Map.Entry<Url, CachedMethodInfo>> sortedEntries = new ArrayList<>(
-            routeMap.getUrlMethodsMap().entrySet()
-        );
-        
-        sortedEntries.sort(Comparator.comparing(
-            e -> e.getKey().getUrlPath(),
-            String.CASE_INSENSITIVE_ORDER
-        ));
-        
-        for (Map.Entry<Url, CachedMethodInfo> entry : sortedEntries) {
-            out.println("<li>"
-                    + entry.getKey().getMethod()
-                    + " "
-                    + entry.getKey().getUrlPath()
-                    + "</li>");
-        }
-        
-        out.println("</ul>");
-        out.println("</body></html>");
-        out.flush();
-    }
+    
 
     
     
