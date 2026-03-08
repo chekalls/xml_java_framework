@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<components>
+    <component>
+        <name>input</name>
+        <class>mg.miniframework.ui.component.form.HtmlInput</class>
+        <rootElement>input</rootElement>
+    </component>
+    <!-- 
+    Template pour ajouter d'autres composants HTML :
+    <component>
+        <name>button</name>
+        <class>mg.miniframework.ui.component.form.HtmlButton</class>
+        <rootElement>button</rootElement>
+    </component>
+    -->
+    <component>
+        <name>select</name>
+        <class>mg.miniframework.ui.component.form.HtmlSelect</class>
+        <rootElement>select</rootElement>
+    </component>
+    <component>
+        <name>form</name>
+        <class>mg.miniframework.ui.component.form.HtmlForm</class>
+        <rootElement>form</rootElement>
+    </component>
+    <component>
+        <name>sidebar</name>
+        <class>mg.miniframework.ui.component.sidebar.HtmlSidebar</class>
+        <rootElement>sidebar</rootElement>
+    </component>
+    <component>
+        <name>sidebar-item</name>
+        <class>mg.miniframework.ui.component.sidebar.HtmlSidebarItem</class>
+        <rootElement>sidebar-item</rootElement>
+    </component>
+</components>
