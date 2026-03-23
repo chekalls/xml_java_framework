@@ -2,10 +2,6 @@ package mg.miniframework.web.servlet;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.reflect.Method;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -18,14 +14,12 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import mg.miniframework.annotation.Controller;
-import mg.miniframework.annotation.JsonUrl;
-import mg.miniframework.annotation.Route;
 import mg.miniframework.core.config.ConfigLoader;
 import mg.miniframework.core.invocation.ControllerMethodInvoker;
 import mg.miniframework.core.routing.CachedMethodInfo;
 import mg.miniframework.core.routing.RouteMap;
 import mg.miniframework.core.routing.RoutePatternUtils;
+import mg.miniframework.core.routing.RouteRegistryBuilder;
 import mg.miniframework.core.routing.Url;
 import mg.miniframework.logging.LogManager;
 import mg.miniframework.logging.LogManager.LogStatus;
@@ -33,7 +27,6 @@ import mg.miniframework.metrics.MetricsManager;
 import mg.miniframework.modules.*;
 import mg.miniframework.security.AuthenticationProvider;
 import mg.miniframework.security.SecurityManager;
-import mg.miniframework.service.api.FrameworkService;
 import mg.miniframework.service.registry.CachedService;
 import mg.miniframework.ui.base.HtmlComponent;
 import mg.miniframework.web.response.ContentRenderManager;
@@ -134,6 +127,7 @@ public class FrontControllerServlet extends HttpServlet {
 
             if (mapSetting.containsKey("jsp_base_path")) {
                 baseFile = mapSetting.get("jsp_base_path");
+                
                 contentRenderManager.setBaseJspPath(baseFile);
             }
 
@@ -169,7 +163,9 @@ public class FrontControllerServlet extends HttpServlet {
             }
 
             if (servletContext.getAttribute("routeMap") == null) {
-                new mg.miniframework.core.routing.RouteRegistryBuilder().build(servletContext, logManager, cachedService);
+                RouteRegistryBuilder builder = new RouteRegistryBuilder();
+                builder.build(servletContext, logManager, cachedService);
+                // builder.loadControllerSidebar(req);
             }
 
             RouteMap routeMap = (RouteMap) servletContext.getAttribute("routeMap");

@@ -1,8 +1,6 @@
 package mg.miniframework.core.bootstrap;
 
 import java.io.IOException;
-import java.util.Map;
-
 import jakarta.servlet.ServletContext;
 import mg.miniframework.logging.LogManager;
 import mg.miniframework.logging.LogManager.LogStatus;

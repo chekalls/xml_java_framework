@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
 import mg.miniframework.service.injection.ServiceInjector;
 import mg.miniframework.core.routing.CachedMethodInfo;
+import mg.miniframework.core.routing.RouteRegistryBuilder;
 import mg.miniframework.logging.LogManager;
 import mg.miniframework.service.registry.CachedService;
 
@@ -36,6 +37,7 @@ public class ControllerMethodInvoker {
 
         Method method = cachedInfo.getMethod();
         Object instance = clazz.getDeclaredConstructor().newInstance();
+        RouteRegistryBuilder.loadControllerSidebar(request, clazz);
         new ServiceInjector(logManager).injectServices(instance, clazz, cachedService);
 
         List<CachedMethodInfo.ParameterInfo> paramInfos = cachedInfo.getParamInfos();

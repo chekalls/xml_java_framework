@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletRequest;
+import mg.miniframework.annotation.Sidebar;
 import mg.miniframework.core.scanning.ControllerScanner;
 import mg.miniframework.logging.LogManager;
 import mg.miniframework.logging.LogManager.LogStatus;
@@ -11,6 +13,8 @@ import mg.miniframework.service.api.FrameworkService;
 import mg.miniframework.service.registry.CachedService;
 
 public class RouteRegistryBuilder {
+
+    // public static 
 
     public RouteMap build(ServletContext servletContext, LogManager logManager, CachedService cachedService)
             throws Exception {
@@ -31,5 +35,18 @@ public class RouteRegistryBuilder {
         logManager.insertLog("Total routes registered: " + routeMap.getUrlMethodsMap().size(), LogStatus.INFO);
         servletContext.setAttribute("routeMap", routeMap);
         return routeMap;
+    }
+
+    public static void loadControllerSidebar(ServletRequest req,Class<?> controller) throws Exception{
+        if(controller.isAnnotationPresent(Sidebar.class)){
+            Sidebar sidebarAnnotation = controller.getAnnotation(Sidebar.class);
+            String module = sidebarAnnotation.prefix();
+            String sidebarFile = "/WEB-INF/views/partials/sidebar-"+module+".xml";
+            try {
+                req.setAttribute("sidebar", sidebarFile);
+            } catch (Exception e) {
+                throw e;
+            }   
+        }
     }
 }

@@ -53,7 +53,7 @@ public abstract class HtmlComponent {
     }
 
     public static void setBasePath(String basePath, ServletContext context) {
-        String normalized = basePath.startsWith("/") ? basePath : "/" + basePath;
+        String normalized = !basePath.startsWith("/") ? basePath : basePath.substring(1);
         String realRoot = context.getRealPath("/");
         HtmlComponent.basePath = (realRoot != null)
                 ? realRoot + normalized
