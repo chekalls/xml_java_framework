@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -32,6 +33,23 @@ public class XmlLoader {
 
     static {
         loadComponent();
+    }
+
+    public static String getXMLTagContent(String filePath, String tagName) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new File(filePath));
+            NodeList list = doc.getElementsByTagName(tagName);
+            if (list.getLength() > 0) {
+                return list.item(0).getTextContent();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     private static void loadComponent() {
@@ -102,9 +120,14 @@ public class XmlLoader {
         return (Class<? extends HtmlComponent>) clazz;
     }
 
-    public static String getXMLFileContentAsString(String resourcePath,ServletContext context){
+    public static String getXMLFileContentAsString(String resourcePath, ServletContext context) {
         String realPath = context.getRealPath(resourcePath);
         return getXMLFileContentAsString(realPath);
+    }
+
+    public static String getXMLFileContentAsString(String resourceOrPath, Pattern pattern) {
+        String xml = readXmlContentAsString(resourceOrPath);
+        return extractComponent(xml, pattern);
     }
 
     public static String getXMLFileContentAsString(String resourceOrPath) {
@@ -147,7 +170,8 @@ public class XmlLoader {
         return "";
     }
 
-    // public static HtmlComponent loadFrom(String xmlPath ,ServletContext context,Class<? extends HtmlComponent> clazz) throws Exception{
+    // public static HtmlComponent loadFrom(String xmlPath ,ServletContext
+    // context,Class<? extends HtmlComponent> clazz) throws Exception{
 
     // }
 
@@ -213,29 +237,38 @@ public class XmlLoader {
         }
     }
 
+    private static String extractComponent(String xmlContent, Pattern pattern) {
+        Matcher m = pattern.matcher(xmlContent);
+        return m.find() ? m.group(1).trim() : "";
+    }
+
     private static String extractStyle(String xmlContent) {
         Matcher m = STYLE_PATTERN.matcher(xmlContent);
         return m.find() ? m.group(1).trim() : "";
     }
-    
+
     /**
-     * Extrait un template spécifique par type depuis le fichier centralisé html-fields.xml
-     * @param templateType Le type du template (ex: "text-field", "textarea-field", "select-field")
-     * @param fieldsXmlPath Chemin vers le fichier html-fields.xml (ex: "/WEB-INF/views/templates/html-fields.xml")
+     * Extrait un template spécifique par type depuis le fichier centralisé
+     * html-fields.xml
+     * 
+     * @param templateType  Le type du template (ex: "text-field", "textarea-field",
+     *                      "select-field")
+     * @param fieldsXmlPath Chemin vers le fichier html-fields.xml (ex:
+     *                      "/WEB-INF/views/templates/html-fields.xml")
      * @return Le contenu du template ou "" si non trouvé
      */
     public static String getTemplateByType(String templateType, String fieldsXmlPath) {
         if (templateType == null || templateType.isBlank() || fieldsXmlPath == null) {
             return "";
         }
-        
+
         try {
             String xmlContent = readXmlContentAsString(fieldsXmlPath);
             if (xmlContent == null || xmlContent.isEmpty()) {
                 System.err.println("Fichier XML de templates vide : " + fieldsXmlPath);
                 return "";
             }
-            
+
             Element rootElement = getRootElement(xmlContent);
             if (rootElement == null) {
                 return "";
@@ -256,7 +289,7 @@ public class XmlLoader {
                     return styleContent != null ? styleContent.trim() : "";
                 }
             }
-            
+
             // Chercher le template avec l'attribut type
             NodeList templates = rootElement.getElementsByTagName("template");
             for (int i = 0; i < templates.getLength(); i++) {
@@ -271,7 +304,7 @@ public class XmlLoader {
                     }
                 }
             }
-            
+
             System.err.println("Template de type '" + templateType + "' non trouvé dans " + fieldsXmlPath);
             return "";
         } catch (Exception e) {

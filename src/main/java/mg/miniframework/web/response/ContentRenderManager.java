@@ -2,15 +2,11 @@ package mg.miniframework.web.response;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Map;
-
-import org.apache.commons.text.StringEscapeUtils;
-import org.w3c.dom.Element;
-
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import mg.miniframework.core.routing.RouteRegistryBuilder;
 import mg.miniframework.logging.LogManager;
 import mg.miniframework.modules.ModelView;
 import mg.miniframework.modules.RouteStatus;
@@ -57,13 +53,14 @@ public class ContentRenderManager {
 
         if (result instanceof ModelView mv) {
             mv.getDataMap().forEach(request::setAttribute);
+            // RouteRegistryBuilder.loadControllerSidebar(request, );
 
             if(mv.getRedirect()!=null && !mv.getRedirect().isBlank()){
                 response.sendRedirect(request.getContextPath() + mv.getRedirect());
                 return RouteStatus.REDIRECT.getCode();
 
             }
-            // if controller explicitly marked this model-view as a plain view
+            
             if (mv.isViewOnly()) {
                 String forwardPath = resolveJspForwardPath(mv.getView());
                 forwardToJsp(request, response, forwardPath);
