@@ -10,16 +10,14 @@ import java.util.Map;
 
 import mg.miniframework.annotation.Controller;
 import mg.miniframework.annotation.GetMapping;
+import mg.miniframework.annotation.Path;
 import mg.miniframework.annotation.PostMapping;
-import mg.miniframework.annotation.Service;
-import mg.miniframework.annotation.UrlMap;
 import mg.miniframework.service.api.FrameworkService;
 
 public class RouteMap {
 
     private Map<Class<?>, List<CachedMethodInfo>> methodMaps;
     private Map<Url, CachedMethodInfo> urlMethodsMap;
-
 
     public RouteMap() {
         methodMaps = new HashMap<>();
@@ -43,16 +41,14 @@ public class RouteMap {
         List<CachedMethodInfo> annotatedMethods = new ArrayList<>();
 
         for (Method m : controller.getDeclaredMethods()) {
-            Annotation urlMapAnnotation = findAnnotationByName(m, UrlMap.class.getName());
-            if (urlMapAnnotation != null) {
+            Path pathAnnotation = m.getAnnotation(Path.class);
+
+            if (pathAnnotation != null) {
                 CachedMethodInfo cachedInfo = new CachedMethodInfo(m);
                 annotatedMethods.add(cachedInfo);
-
                 String urlValue = null;
                 try {
-                    Object value = urlMapAnnotation.annotationType()
-                            .getMethod("value")
-                            .invoke(urlMapAnnotation);
+                    Object value = pathAnnotation.annotationType().getMethod("path").invoke(pathAnnotation);
                     if (value != null) {
                         urlValue = value.toString();
                     }
@@ -76,34 +72,34 @@ public class RouteMap {
         methodMaps.put(controller, annotatedMethods);
     }
 
-    public static List<Class<? extends FrameworkService>> getControllerServices(Class<?> controllerClass){
+    public static List<Class<? extends FrameworkService>> getControllerServices(Class<?> controllerClass) {
         List<Class<? extends FrameworkService>> fields = new ArrayList<>();
         Field[] controllerFields = controllerClass.getDeclaredFields();
         for (Field field : controllerFields) {
-            if(field.getType().getSuperclass().equals(FrameworkService.class)){
+            if (field.getType().getSuperclass().equals(FrameworkService.class)) {
                 fields.add(field.getType().asSubclass(FrameworkService.class));
             }
         }
         return fields;
-    }  
+    }
 
     // private void loadControllerService(Class<?> controller) {
-    //     Field[] fields = controller.getDeclaredFields();
-    //     for (Field field : fields) {
-    //         field.setAccessible(true);
-    //         if (field.isAnnotationPresent(Service.class)) {
-    //             Class<?> serviceType = field.getType();
-    //             if (serviceType.getSuperclass().equals(FrameworkService.class)) {
-    //                 try {
-    //                     Object serviceInstance = serviceType.newInstance();
-    //                     serviceType.getMethod("init").invoke(serviceInstance);
-    //                     field.set(controller, serviceInstance);
-    //                 } catch (Exception e) {
-    //                     e.printStackTrace();
-    //                 }
-    //             }
-    //         }
-    //     }
+    // Field[] fields = controller.getDeclaredFields();
+    // for (Field field : fields) {
+    // field.setAccessible(true);
+    // if (field.isAnnotationPresent(Service.class)) {
+    // Class<?> serviceType = field.getType();
+    // if (serviceType.getSuperclass().equals(FrameworkService.class)) {
+    // try {
+    // Object serviceInstance = serviceType.newInstance();
+    // serviceType.getMethod("init").invoke(serviceInstance);
+    // field.set(controller, serviceInstance);
+    // } catch (Exception e) {
+    // e.printStackTrace();
+    // }
+    // }
+    // }
+    // }
     // }
 
     private boolean isAMapping(Method method, Url newUrl) throws Exception {
